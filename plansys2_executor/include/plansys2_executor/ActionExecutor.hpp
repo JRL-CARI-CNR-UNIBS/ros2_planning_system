@@ -42,7 +42,12 @@ public:
     FAILURE,
     CANCELLED
   };
-
+  // enum TimeoutState
+  // {
+  //     NONE,
+  //     EARLY,
+  //     LATE
+  // };
   using Ptr = std::shared_ptr<ActionExecutor>;
   static Ptr make_shared(
     const std::string & action,
@@ -88,20 +93,35 @@ protected:
   std::string feedback_;
   float completion_;
 
+  double early_timeout_;
+  double late_timeout_;
+  // TimeoutState timeout_state_ = TimeoutState::NONE;
+
   rclcpp_lifecycle::LifecyclePublisher<plansys2_msgs::msg::ActionExecution>::SharedPtr
     action_hub_pub_;
   rclcpp::Subscription<plansys2_msgs::msg::ActionExecution>::SharedPtr action_hub_sub_;
 
   void action_hub_callback(const plansys2_msgs::msg::ActionExecution::SharedPtr msg);
+
   void request_for_performers();
   void confirm_performer(const std::string & node_id);
   void reject_performer(const std::string & node_id);
+  void reject_others_performers(const std::string & performer_node_id);
 
   std::string get_name(const std::string & action_expr);
   std::vector<std::string> get_params(const std::string & action_expr);
 
   void wait_timeout();
   rclcpp::TimerBase::SharedPtr waiting_timer_;
+
+  std::map<std::string, plansys2_msgs::msg::ActionExecution> involved_auction_nodes_ = {};
+  plansys2_msgs::msg::ActionExecution::SharedPtr solve_auction();
+  void manage_auction_closure();
+
+  bool all_nodes_already_responded();
+  bool at_least_one_node_already_responded();
+  bool at_least_one_node_has_finite_cost();
+  bool at_least_one_node_responded_with_finite_cost();
 };
 
 struct ActionExecutionInfo

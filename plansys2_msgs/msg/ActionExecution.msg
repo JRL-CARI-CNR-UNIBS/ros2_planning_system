@@ -5,6 +5,7 @@ int16 REJECT=4
 int16 FEEDBACK=5
 int16 FINISH=6
 int16 CANCEL=7
+int16 WAIT=8
 
 int16 type
 string node_id
@@ -15,3 +16,8 @@ string[] arguments
 bool success
 float32 completion
 string status
+
+plansys2_msgs/ActionCost action_cost
+
+
+

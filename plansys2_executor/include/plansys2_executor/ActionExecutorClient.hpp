@@ -21,6 +21,7 @@
 
 #include "plansys2_msgs/msg/action_execution.hpp"
 #include "plansys2_msgs/msg/action_performer_status.hpp"
+#include "plansys2_msgs/msg/action_cost.hpp"
 
 #include "plansys2_domain_expert/DomainExpertClient.hpp"
 #include "plansys2_problem_expert/ProblemExpertClient.hpp"
@@ -65,7 +66,19 @@ protected:
   bool should_execute(const std::string & action, const std::vector<std::string> & args);
   void send_response(const plansys2_msgs::msg::ActionExecution::SharedPtr msg);
   void send_feedback(float completion, const std::string & status = "");
+  void send_wait(const plansys2_msgs::msg::ActionExecution::SharedPtr msg);
+  // void send_action_bid();
   void finish(bool success, float completion, const std::string & status = "");
+
+  using ActionCostPtr = plansys2_msgs::msg::ActionCost::SharedPtr;
+  virtual void compute_action_cost(const plansys2_msgs::msg::ActionExecution::SharedPtr msg)
+  {
+    action_cost_ = std::make_shared<plansys2_msgs::msg::ActionCost>();
+    action_cost_->nominal_cost = 0.0;
+    action_cost_->std_dev_cost = 0.0;
+  } 
+  void set_action_cost(double nominal_action_cost, double std_dev_action_cost);
+  void set_action_cost(const ActionCostPtr & action_cost);
 
   std::chrono::nanoseconds rate_;
   std::string action_managed_;
@@ -84,6 +97,8 @@ protected:
   rclcpp::TimerBase::SharedPtr hearbeat_pub_;
   plansys2_msgs::msg::ActionPerformerStatus status_;
   rclcpp::Time start_time_;
+
+  ActionCostPtr action_cost_ = nullptr; 
 };
 
 }  // namespace plansys2

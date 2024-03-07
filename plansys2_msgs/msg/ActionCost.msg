@@ -1,0 +1,2 @@
+float64 nominal_cost
+float64 std_dev_cost
