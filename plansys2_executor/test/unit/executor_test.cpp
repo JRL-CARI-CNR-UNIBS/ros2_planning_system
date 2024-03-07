@@ -107,7 +107,7 @@ public:
   {
     std::cerr << "MoveAction::on_activate" << std::endl;
     counter_ = 0;
-    start_ = now();
+    start_ = std::chrono::high_resolution_clock::now();
 
     return ActionExecutorClient::on_activate(state);
   }
@@ -120,18 +120,17 @@ public:
     }
 
     cycles_++;
-    auto current_time = now();
-    auto elapsed_time = (current_time - start_).seconds();
-
-    rclcpp::Rate rate(100);
+    auto current_time = std::chrono::high_resolution_clock::now();
+    auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+      current_time - start_);
 
     if (runtime_ > 1e-5) {
-      if (elapsed_time > runtime_) {
+      if (elapsed_time > std::chrono::duration<double>(runtime_)) {
         finish(true, 1.0, "completed");
         executions_++;
       } else {
-        send_feedback(elapsed_time / runtime_, "running");
-        rate.sleep();
+        send_feedback((static_cast<double>(elapsed_time.count()) / 1000.0) / runtime_, "running");
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
       }
     } else {
       if (counter_++ > 3) {
@@ -147,7 +146,7 @@ public:
   int executions_;
   int cycles_;
   double runtime_;
-  rclcpp::Time start_;
+  std::chrono::high_resolution_clock::time_point start_;
 };
 
 class TransportAction : public plansys2::ActionExecutorClient
@@ -249,7 +248,7 @@ TEST(executor, action_executor_client)
 
   std::string bt_xml_tree =
     R"(
-    <root BTCPP_format="4" main_tree_to_execute = "MainTree" >
+    <root BTCPP_format = "4" main_tree_to_execute = "MainTree" >
       <BehaviorTree ID="MainTree">
         <Sequence name="root_sequence">
           <Parallel success_count="2" failure_count="1">
@@ -692,7 +691,7 @@ TEST(executor, action_real_action_1)
 
   std::string bt_xml_tree =
     R"(
-    <root BTCPP_format="4" main_tree_to_execute="MainTree">
+    <root BTCPP_format = "4" main_tree_to_execute="MainTree">
       <BehaviorTree ID="MainTree">
         <Sequence name="(move r2d2 steering_wheels_zone assembly_zone):0">
           <WaitAction action="other"/>
@@ -754,7 +753,7 @@ TEST(executor, action_real_action_1)
   // Test ApplyAtStartEffect and CheckOverAllReq
   bt_xml_tree =
     R"(
-    <root BTCPP_format="4" main_tree_to_execute="MainTree">
+    <root BTCPP_format = "4" main_tree_to_execute="MainTree">
       <BehaviorTree ID="MainTree">
         <WaitAtStartReq action="(move r2d2 steering_wheels_zone assembly_zone):0"/>
         <Sequence name="(move r2d2 steering_wheels_zone assembly_zone):0">
@@ -947,7 +946,7 @@ TEST(executor, cancel_bt_execution)
 
   std::string bt_xml_tree =
     R"(
-    <root BTCPP_format="4" main_tree_to_execute="MainTree">
+    <root BTCPP_format = "4" main_tree_to_execute="MainTree">
       <BehaviorTree ID="MainTree">
         <WaitAtStartReq action="(move r2d2 steering_wheels_zone assembly_zone):0"/>
         <Sequence name="(move r2d2 steering_wheels_zone assembly_zone):0">
@@ -1551,6 +1550,7 @@ TEST(executor, executor_client_cancel_plan)
   t.join();
 }
 
+
 TEST(executor, action_timeout)
 {
   auto test_node_1 = rclcpp::Node::make_shared("test_node_1");
@@ -1651,6 +1651,16 @@ TEST(executor, action_timeout)
   auto problem = problem_client->getProblem();
   auto plan = planner_client->getPlan(domain, problem);
 
+  std::cerr << "Plan result: " << std::endl;
+
+  for (auto & item : plan.value().items) {
+    std::cerr << "Time: " << item.time << std::endl;
+    std::cerr << "Action: " << item.action << std::endl;
+    std::cerr << "Duration: " << item.duration << std::endl;
+    std::cerr << "-------------------------------" << std::endl;
+  }
+
+
   ASSERT_FALSE(domain.empty());
   ASSERT_FALSE(problem.empty());
   ASSERT_TRUE(plan.has_value());
@@ -1674,6 +1684,14 @@ TEST(executor, action_timeout)
       rate.sleep();
     }
   }
+  // std::cerr << "Executor client get result has value: " <<
+  //         executor_client->getResult().has_value() <<
+  //         std::endl;
+  // std::cerr << "Executor client get result value: " <<
+  //           executor_client->getResult().value() <<
+  //           std::endl;
+  // std:: cerr << "Result success: " << result.success << std::endl;
+  // std:: cerr << "Status : " << result.success << std::endl;
 
   ASSERT_TRUE(executor_client->getResult().has_value());
   auto result = executor_client->getResult().value();

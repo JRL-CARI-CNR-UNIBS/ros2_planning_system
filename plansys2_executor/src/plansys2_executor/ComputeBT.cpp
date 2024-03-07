@@ -31,6 +31,10 @@
 #include "behaviortree_cpp/utils/shared_library.h"
 #include "behaviortree_cpp/blackboard.h"
 
+#ifdef ZMQ_FOUND
+#include <behaviortree_cpp/loggers/groot2_publisher.h>
+#endif
+
 #include "plansys2_executor/behavior_tree/execute_action_node.hpp"
 #include "plansys2_executor/behavior_tree/wait_action_node.hpp"
 #include "plansys2_executor/behavior_tree/check_action_node.hpp"
@@ -67,6 +71,11 @@ ComputeBT::ComputeBT()
       "action_timeouts." + action + ".duration_overrun_percentage",
       0.0);
   }
+
+#ifdef ZMQ_FOUND
+  this->declare_parameter<bool>("enable_groot_monitoring", true);
+  this->declare_parameter<int>("server_port", 2667);
+#endif
 
   compute_bt_srv_ = create_service<std_srvs::srv::Trigger>(
     "compute_bt",
@@ -337,6 +346,26 @@ ComputeBT::computeBTCallback(
   blackboard->set("bt_builder", bt_builder);
 
   auto tree = factory.createTreeFromText(bt_xml_tree, blackboard);
+
+#ifdef ZMQ_FOUND
+  unsigned int server_port = this->get_parameter("server_port").as_int();
+
+  std::unique_ptr<BT::Groot2Publisher> groot_publisher;
+  if (this->get_parameter("enable_groot_monitoring").as_bool()) {
+    RCLCPP_DEBUG(
+      get_logger(),
+      "[%s] Groot monitoring: Server port: %d",
+      get_name(), server_port);
+    try {
+      groot_publisher.reset(
+        new BT::Groot2Publisher(
+          tree,
+          server_port));
+    } catch (const BT::LogicError & exc) {
+      RCLCPP_ERROR(get_logger(), "ZMQ error: %s", exc.what());
+    }
+  }
+#endif
 
   finish = true;
   t.join();

@@ -25,6 +25,11 @@
 #include "behaviortree_cpp/loggers/bt_file_logger_v2.h"
 #include "behaviortree_cpp/loggers/bt_minitrace_logger.h"
 
+
+#ifdef ZMQ_FOUND
+#include <behaviortree_cpp/loggers/groot2_publisher.h>
+#endif
+
 #include "plansys2_executor/ActionExecutorClient.hpp"
 #include "rclcpp/rclcpp.hpp"
 
@@ -65,6 +70,7 @@ private:
   std::string bt_xml_file_;
   std::vector<std::string> plugin_list_;
   bool finished_;
+  std::unique_ptr<BT::Groot2Publisher> groot_publisher;
   std::unique_ptr<BT::FileLogger2> bt_file_logger_;
   std::unique_ptr<BT::MinitraceLogger> bt_minitrace_logger_;
 };

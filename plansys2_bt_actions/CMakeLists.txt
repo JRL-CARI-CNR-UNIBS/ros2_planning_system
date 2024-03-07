@@ -13,6 +13,14 @@ find_package(behaviortree_cpp REQUIRED)
 find_package(action_msgs REQUIRED)
 find_package(lifecycle_msgs REQUIRED)
 
+find_package(ZMQ)
+if(ZMQ_FOUND)
+    message(STATUS "ZeroMQ found.")
+    add_definitions(-DZMQ_FOUND)
+else()
+  message(WARNING "ZeroMQ NOT found. Not including PublisherZMQ.")
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 
 set(dependencies
@@ -25,7 +33,7 @@ set(dependencies
     lifecycle_msgs
 )
 
-include_directories(include)
+include_directories(include ${ZMQ_INCLUDE_DIRS})
 
 set(BT_ACTIONS_SOURCES
   src/plansys2_bt_actions/BTAction.cpp
@@ -33,6 +41,7 @@ set(BT_ACTIONS_SOURCES
 
 add_library(${PROJECT_NAME} SHARED ${BT_ACTIONS_SOURCES})
 ament_target_dependencies(${PROJECT_NAME} ${dependencies})
+target_link_libraries(${PROJECT_NAME} ${ZMQ_LIBRARIES})
 
 add_executable(bt_action_node
   src/bt_action_node.cpp

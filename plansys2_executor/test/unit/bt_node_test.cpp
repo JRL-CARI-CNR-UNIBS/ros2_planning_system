@@ -118,7 +118,7 @@ TEST(problem_expert, wait_overall_req_test)
 
   std::string bt_xml_tree =
     R"(
-    <root BTCPP_format="4" main_tree_to_execute = "MainTree" >
+    <root BTCPP_format = "4" main_tree_to_execute = "MainTree" >
       <BehaviorTree ID="MainTree">
         <Sequence name="root_sequence">
           <CheckOverAllReq action="(move robot1 wheels_zone assembly_zone):5"/>
@@ -232,7 +232,7 @@ TEST(problem_expert, wait_atstart_req_test)
 
   std::string bt_xml_tree =
     R"(
-    <root BTCPP_format="4" main_tree_to_execute = "MainTree" >
+    <root BTCPP_format = "4" main_tree_to_execute = "MainTree" >
       <BehaviorTree ID="MainTree">
         <Sequence name="root_sequence">
           <WaitAtStartReq action="(move robot1 wheels_zone assembly_zone):5"/>
@@ -348,7 +348,7 @@ TEST(problem_expert, wait_atend_req_test)
 
   std::string bt_xml_tree =
     R"(
-    <root BTCPP_format="4" main_tree_to_execute = "MainTree" >
+    <root BTCPP_format = "4" main_tree_to_execute = "MainTree" >
       <BehaviorTree ID="MainTree">
         <Sequence name="root_sequence">
           <CheckAtEndReq action="(move robot1 wheels_zone assembly_zone):5"/>
@@ -462,7 +462,7 @@ TEST(problem_expert, at_start_effect_test)
 
   std::string bt_xml_tree =
     R"(
-    <root BTCPP_format="4" main_tree_to_execute = "MainTree" >
+    <root BTCPP_format = "4" main_tree_to_execute = "MainTree" >
       <BehaviorTree ID="MainTree">
         <Sequence name="root_sequence">
           <ApplyAtStartEffect action="(move robot1 wheels_zone assembly_zone):5"/>
@@ -581,7 +581,7 @@ TEST(problem_expert, at_end_effect_test)
 
   std::string bt_xml_tree =
     R"(
-    <root BTCPP_format="4" main_tree_to_execute = "MainTree" >
+    <root BTCPP_format = "4" main_tree_to_execute = "MainTree" >
       <BehaviorTree ID="MainTree">
         <Sequence name="root_sequence">
           <ApplyAtEndEffect action="(move robot1 wheels_zone assembly_zone):5"/>

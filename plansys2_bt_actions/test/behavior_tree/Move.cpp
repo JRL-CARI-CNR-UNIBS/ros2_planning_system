@@ -33,9 +33,7 @@ Move::Move(
 : plansys2::BtActionNode<test_msgs::action::Fibonacci>(xml_tag_name, action_name, conf)
 {
   rclcpp_lifecycle::LifecycleNode::SharedPtr node;
-  if (!config().blackboard->get("node", node)) {
-    RCLCPP_ERROR(node_->get_logger(), "Failed to get 'node' from the blackboard");
-  }
+  config().blackboard->get("node", node);
 
   node->declare_parameter<std::vector<std::string>>(
     "waypoints", std::vector<std::string>({}));

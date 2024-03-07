@@ -9,11 +9,9 @@ These parameters are
 2. `bt_xml_file`: An absolute path to the BT `.xml` file to execute.
 3. `plugins`: a list of BehaviorTree.CPP shared libraries to load. Any BT node which is in the `.xml` but is not provided by the BehaviorTree.CPP library itself must be in one of the libraries specified
 4. `enable_groot_monitoring`: a boolean which specifies if ZMQ publisher should be created, for use with [Groot](https://github.com/BehaviorTree/Groot) (default is `false`)
-5. `publisher_port`: the ZMQ publisher port to use (if `enable_groot_monitoring` is enabled)
-6. `server_port`: the ZMQ server port to use (if `enable_groot_monitoring` is enabled)
-7. `max_msgs_per_second`: max ZMQ messages per second (if `enable_groot_monitoring` is enabled)
-8. `bt_file_logging`: a boolean which [enables logging of BT state changes in `.fbl` files](https://www.behaviortree.dev/tutorial_05_subtrees/), useful for playing back behavior tree execution using `Groot` (default is `false`)
-9. `bt_minitrace_logging`: a boolean which enables logging of `.json` files for recording the execution time of each node (default is `false`)
+5. `server_port`: the ZMQ server port to use (if `enable_groot_monitoring` is enabled). The publisher port is managed directly internally in `BT::Groot2Publisher` and set to `server_port+1`.
+6. `bt_file_logging`: a boolean which [enables logging of BT state changes in `.fbl` files](https://www.behaviortree.dev/tutorial_05_subtrees/), useful for playing back behavior tree execution using `Groot` (default is `false`)
+7. `bt_minitrace_logging`: a boolean which enables logging of `.json` files for recording the execution time of each node (default is `false`)
 
 Files created by the `.fbl` and minitrace loggers are stored in `/tmp/<node_name>/`, with names containing a timestamp.
 

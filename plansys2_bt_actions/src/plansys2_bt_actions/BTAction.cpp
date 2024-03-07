@@ -38,6 +38,10 @@ BTAction::BTAction(
     "plugins", std::vector<std::string>({}));
   declare_parameter<bool>("bt_file_logging", false);
   declare_parameter<bool>("bt_minitrace_logging", false);
+#ifdef ZMQ_FOUND
+  declare_parameter<bool>("enable_groot_monitoring", true);
+  declare_parameter<int>("server_port", -1);
+#endif
 }
 
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
@@ -69,6 +73,7 @@ BTAction::on_configure(const rclcpp_lifecycle::State & previous_state)
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
 BTAction::on_cleanup(const rclcpp_lifecycle::State & previous_state)
 {
+  groot_publisher.reset();
   return ActionExecutorClient::on_cleanup(previous_state);
 }
 
@@ -86,12 +91,8 @@ BTAction::on_activate(const rclcpp_lifecycle::State & previous_state)
   }
 
   for (int i = 0; i < get_arguments().size(); i++) {
-    auto arg = get_arguments()[i];
-    RCLCPP_DEBUG_STREAM(
-      get_logger(),
-      "Setting arg" << i << " [" << arg << "]");
     std::string argname = "arg" + std::to_string(i);
-    blackboard_->set(argname, arg);
+    blackboard_->set(argname, get_arguments()[i]);
   }
 
   if (get_parameter("bt_file_logging").as_bool() ||
@@ -126,6 +127,34 @@ BTAction::on_activate(const rclcpp_lifecycle::State & previous_state)
     }
   }
 
+#ifdef ZMQ_FOUND
+  bool enable_groot_monitoring = get_parameter("enable_groot_monitoring").as_bool();
+  int server_port = get_parameter("server_port").as_int();
+
+  if (enable_groot_monitoring) {
+    if (server_port <= 0) {
+      RCLCPP_WARN(
+        get_logger(),
+        "[%s] Groot monitoring ports not provided, disabling Groot monitoring."
+        " server port: %d",
+        get_name(), server_port);
+    } else {
+      RCLCPP_DEBUG(
+        get_logger(),
+        "[%s] Groot monitoring: Server port: %d",
+        get_name(), server_port);
+      try {
+        groot_publisher.reset(
+          new BT::Groot2Publisher(
+            tree_,
+            server_port));
+      } catch (const BT::LogicError & exc) {
+        RCLCPP_ERROR(get_logger(), "ZMQ error: %s", exc.what());
+      }
+    }
+  }
+#endif
+
   finished_ = false;
   return ActionExecutorClient::on_activate(previous_state);
 }
@@ -133,6 +162,7 @@ BTAction::on_activate(const rclcpp_lifecycle::State & previous_state)
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
 BTAction::on_deactivate(const rclcpp_lifecycle::State & previous_state)
 {
+  groot_publisher.reset();
   bt_minitrace_logger_.reset();
   bt_file_logger_.reset();
   tree_.haltTree();

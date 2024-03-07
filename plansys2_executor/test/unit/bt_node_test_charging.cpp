@@ -113,7 +113,7 @@ TEST(problem_expert, wait_atstart_req_test)
 
   std::string bt_xml_tree =
     R"(
-    <root BTCPP_format="4" main_tree_to_execute = "MainTree" >
+    <root BTCPP_format = "4" main_tree_to_execute = "MainTree" >
       <BehaviorTree ID="MainTree">
         <Sequence name="root_sequence">
           <WaitAtStartReq action="(move robot1 wp1 wp2):5"/>
@@ -238,7 +238,7 @@ TEST(problem_expert, apply_atstart_effect_test)
 
   std::string bt_xml_tree =
     R"(
-    <root BTCPP_format="4" main_tree_to_execute = "MainTree" >
+    <root BTCPP_format = "4" main_tree_to_execute = "MainTree" >
       <BehaviorTree ID="MainTree">
         <Sequence name="root_sequence">
           <ApplyAtStartEffect action="(move robot1 wp1 wp2):5"/>
@@ -365,7 +365,7 @@ TEST(problem_expert, apply_atend_effect_test)
 
   std::string bt_xml_tree =
     R"(
-    <root BTCPP_format="4" main_tree_to_execute = "MainTree" >
+    <root BTCPP_format = "4" main_tree_to_execute = "MainTree" >
       <BehaviorTree ID="MainTree">
         <Sequence name="root_sequence">
           <ApplyAtEndEffect action="(move robot1 wp1 wp2):5"/>

@@ -38,9 +38,7 @@ public:
     const BT::NodeConfig & conf)
   : BT::ActionNodeBase(xml_tag_name, conf), action_name_(action_name)
   {
-    if (!config().blackboard->get("node", node_)) {
-      RCLCPP_ERROR(node_->get_logger(), "Failed to get 'node' from the blackboard");
-    }
+    config().blackboard->get("node", node_);
 
     // Get the required items from the blackboard
     server_timeout_ = 5s;
@@ -97,7 +95,6 @@ public:
         5.0,
         "The amount of time to wait for a response from the action server, in seconds")
     };
-    // The user defined ports are added to the basic ports
     basic.insert(addition.begin(), addition.end());
 
     return basic;
@@ -309,7 +306,6 @@ public:
     if (should_cancel_goal()) {
       cancel_goal();
     }
-
     resetStatus();
   }
 

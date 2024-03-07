@@ -36,33 +36,51 @@ CheckTimeout::CheckTimeout(
   problem_client_ =
     config().blackboard->get<std::shared_ptr<plansys2::ProblemExpertClient>>(
     "problem_client");
-
-  node_ = config().blackboard->get<rclcpp_lifecycle::LifecycleNode::SharedPtr>("node");
-  start_ = node_->now();
 }
 
 BT::NodeStatus
 CheckTimeout::tick()
 {
+  std::cerr << "CheckTimeout::tick()" << std::endl;
+
   std::string action;
   getInput("action", action);
+  std::cerr << "Action: " << action << std::endl;
+  std::cerr << "Status: " << status() << std::endl;
+  if (status() == BT::NodeStatus::IDLE) {
+    std::cerr << "Setting start time" << std::endl;
+    start_ = std::chrono::high_resolution_clock::now();
+  }
+  setStatus(BT::NodeStatus::RUNNING);
+  std::cerr << "Status: " << status() << std::endl;
+
+  std::cerr << "Action status: " <<
+    (*action_map_)[action].action_executor.get()->get_status()
+            << std::endl;
 
   if ((*action_map_)[action].action_executor != nullptr) {
     double duration = (*action_map_)[action].duration;
+    std::cerr << "Duration: " << duration << std::endl;
     double duration_overrun_percentage = (*action_map_)[action].duration_overrun_percentage;
+    std::cerr << "Duration overrun percentage: " << duration_overrun_percentage << std::endl;
     if (duration_overrun_percentage >= 0) {
       double max_duration = (1.0 + duration_overrun_percentage / 100.0) * duration;
-      auto current_time = node_->now();
-      auto elapsed_time = (current_time - start_).seconds();
-      if (elapsed_time > max_duration) {
-        RCLCPP_ERROR_STREAM(
-          node_->get_logger(),
-          "Actual duration of " << action << " exceeds max duration (" << std::fixed <<
-            std::setprecision(2) << max_duration << " secs).");
+      std::cerr << "Max duration: " << max_duration << std::endl;
+      auto current_time = std::chrono::high_resolution_clock::now();
+      std::cerr << "Current time: " << current_time.time_since_epoch().count() << std::endl;
+      std::cerr << "Start time: " << start_.time_since_epoch().count() << std::endl;
+
+      auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+        current_time - start_);
+      std::cerr << "Elapsed time: " << elapsed_time.count() << std::endl;
+      if (elapsed_time > std::chrono::duration<double>(max_duration)) {
+        std::cerr << "Actual duration of " << action << " exceeds max duration (" << std::fixed <<
+          std::setprecision(2) << max_duration << " secs)." << std::endl;
         return BT::NodeStatus::FAILURE;
       }
     }
   }
+  std::cerr << "Status: success" << std::endl;
 
   return BT::NodeStatus::SUCCESS;
 }
