@@ -10,6 +10,7 @@ find_package(action_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Action.msg"
+  "msg/ActionCost.msg"
   "msg/ActionExecution.msg"
   "msg/ActionExecutionInfo.msg"
   "msg/ActionPerformerStatus.msg"

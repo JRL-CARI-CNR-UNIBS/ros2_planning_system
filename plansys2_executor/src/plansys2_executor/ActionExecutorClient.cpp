@@ -128,8 +128,17 @@ ActionExecutorClient::action_hub_callback(const plansys2_msgs::msg::ActionExecut
       if (get_current_state().id() == lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE &&
         !commited_ && should_execute(msg->action, msg->arguments))
       {
+        RCLCPP_INFO(get_logger(), "Received request for action %s", msg->action.c_str());
+        current_arguments_ = msg->arguments;
+        compute_action_cost(msg);
         commited_ = true;
-        send_response(msg);
+        // TODO: Reasoning, if here, if some other request arrive will be discarded
+        if(action_cost_){
+          send_response(msg);
+        }
+        else{
+          send_wait(msg);
+        }
       }
       break;
     case plansys2_msgs::msg::ActionExecution::CONFIRM:
@@ -156,6 +165,7 @@ ActionExecutorClient::action_hub_callback(const plansys2_msgs::msg::ActionExecut
     case plansys2_msgs::msg::ActionExecution::RESPONSE:
     case plansys2_msgs::msg::ActionExecution::FEEDBACK:
     case plansys2_msgs::msg::ActionExecution::FINISH:
+    case plansys2_msgs::msg::ActionExecution::WAIT:
       break;
     default:
       RCLCPP_ERROR(
@@ -199,6 +209,7 @@ ActionExecutorClient::send_response(
   plansys2_msgs::msg::ActionExecution msg_resp(*msg);
   msg_resp.type = plansys2_msgs::msg::ActionExecution::RESPONSE;
   msg_resp.node_id = get_name();
+  msg_resp.action_cost = *action_cost_;
 
   action_hub_pub_->publish(msg_resp);
 }
@@ -213,6 +224,16 @@ ActionExecutorClient::send_feedback(float completion, const std::string & status
   msg_resp.arguments = current_arguments_;
   msg_resp.completion = completion;
   msg_resp.status = status;
+  msg_resp.action_cost = *action_cost_;
+
+  action_hub_pub_->publish(msg_resp);
+}
+
+void ActionExecutorClient::send_wait(const plansys2_msgs::msg::ActionExecution::SharedPtr msg)
+{
+  plansys2_msgs::msg::ActionExecution msg_resp(*msg);
+  msg_resp.type = plansys2_msgs::msg::ActionExecution::WAIT;
+  msg_resp.node_id = get_name();
 
   action_hub_pub_->publish(msg_resp);
 }
@@ -234,6 +255,40 @@ ActionExecutorClient::finish(bool success, float completion, const std::string &
   msg_resp.success = success;
 
   action_hub_pub_->publish(msg_resp);
+  action_cost_ = nullptr;
+  // TODO: importanteeeee
+}
+
+// void
+// ActionExecutorClient::send_action_bid()
+// {
+//   plansys2_msgs::msg::ActionExecution msg_resp;
+//   msg_resp.type = plansys2_msgs::msg::ActionExecution::RESPONSE;
+//   msg_resp.node_id = get_name();
+//   msg_resp.action = action_managed_;
+//   msg_resp.arguments = current_arguments_;
+//   msg_resp.completion = 0;
+//   msg_resp.status = "auction bid";
+//   msg_resp.action_cost = *action_cost_;
+
+//   if (action_cost_) {
+//     msg_resp.action_cost = *action_cost_;
+//   }
+  
+//   action_hub_pub_->publish(msg_resp);
+// }
+void ActionExecutorClient::set_action_cost(double nominal_action_cost, double std_dev_action_cost)
+{
+  if(!action_cost_){
+    action_cost_ = std::make_shared<plansys2_msgs::msg::ActionCost>();
+  }
+  action_cost_->nominal_cost = nominal_action_cost;
+  action_cost_->std_dev_cost = std_dev_action_cost;
+}
+
+void ActionExecutorClient::set_action_cost(const ActionCostPtr & action_cost)
+{
+  action_cost_ = std::move(action_cost);
 }
 
 }  // namespace plansys2

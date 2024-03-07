@@ -19,3 +19,5 @@ builtin_interfaces/Duration duration
 
 float32 completion
 string message_status
+
+plansys2_msgs/ActionCost updated_action_cost

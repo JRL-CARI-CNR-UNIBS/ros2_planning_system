@@ -37,6 +37,8 @@ ActionExecutor::ActionExecutor(
     "actions_hub", rclcpp::QoS(100).reliable(),
     std::bind(&ActionExecutor::action_hub_callback, this, _1));
 
+  RCLCPP_INFO(node->get_logger(), "Early timeout: %f", node->get_parameter("early_timeout").as_double());
+  RCLCPP_INFO(node->get_logger(), "Late timeout: %f", node->get_parameter("late_timeout").as_double());
   state_time_ = node_->now();
 
   action_ = action;
@@ -44,6 +46,10 @@ ActionExecutor::ActionExecutor(
   action_params_ = get_params(action);
   start_execution_ = node_->now();
   state_time_ = start_execution_;
+
+  early_timeout_ = node->get_parameter("early_timeout").as_double();
+  late_timeout_ = node->get_parameter("late_timeout").as_double();
+
 }
 
 void
@@ -58,20 +64,27 @@ ActionExecutor::action_hub_callback(const plansys2_msgs::msg::ActionExecution::S
     case plansys2_msgs::msg::ActionExecution::CANCEL:
       // These cases have no meaning requester
       break;
+    case plansys2_msgs::msg::ActionExecution::WAIT:
     case plansys2_msgs::msg::ActionExecution::RESPONSE:
       if (msg->arguments == action_params_ && msg->action == action_name_) {
-        if (state_ == DEALING) {
-          confirm_performer(msg->node_id);
-          current_performer_id_ = msg->node_id;
-          state_ = RUNNING;
-          waiting_timer_ = nullptr;
-          start_execution_ = node_->now();
-          state_time_ = node_->now();
-        } else {
-          reject_performer(msg->node_id);
-        }
+        involved_auction_nodes_[msg->node_id] = *msg;
       }
       break;
+    // case plansys2_msgs::msg::ActionExecution::RESPONSE:
+    //   if (msg->arguments == action_params_ && msg->action == action_name_) {
+    //     if (state_ == DEALING) {
+    //       std::string performer = solve_auction(); 
+    //       confirm_performer(msg->node_id);
+    //       current_performer_id_ = msg->node_id;
+    //       state_ = RUNNING;
+    //       waiting_timer_ = nullptr;
+    //       start_execution_ = node_->now();
+    //       state_time_ = node_->now();
+    //     } else {
+    //       reject_performer(msg->node_id);
+    //     }
+    //   }
+    //   break;
     case plansys2_msgs::msg::ActionExecution::FEEDBACK:
       if (state_ != RUNNING || msg->arguments != action_params_ || msg->action != action_name_ ||
         msg->node_id != current_performer_id_)
@@ -101,6 +114,7 @@ ActionExecutor::action_hub_callback(const plansys2_msgs::msg::ActionExecution::S
         action_hub_pub_->on_deactivate();
         action_hub_pub_ = nullptr;
         action_hub_sub_ = nullptr;
+        involved_auction_nodes_ = {};
       }
       break;
     default:
@@ -119,7 +133,7 @@ ActionExecutor::confirm_performer(const std::string & node_id)
   msg.node_id = node_id;
   msg.action = action_name_;
   msg.arguments = action_params_;
-
+  RCLCPP_INFO(node_->get_logger(), "Confirming %s to %s", action_.c_str(), node_id.c_str());
   action_hub_pub_->publish(msg);
 }
 
@@ -131,7 +145,7 @@ ActionExecutor::reject_performer(const std::string & node_id)
   msg.node_id = node_id;
   msg.action = action_name_;
   msg.arguments = action_params_;
-
+  RCLCPP_INFO(node_->get_logger(), "Rejecting %s to %s", action_.c_str(), node_id.c_str());
   action_hub_pub_->publish(msg);
 }
 
@@ -143,7 +157,7 @@ ActionExecutor::request_for_performers()
   msg.node_id = node_->get_name();
   msg.action = action_name_;
   msg.arguments = action_params_;
-
+  RCLCPP_INFO(node_->get_logger(), "Requesting %s", action_.c_str());
   action_hub_pub_->publish(msg);
 }
 
@@ -196,15 +210,32 @@ ActionExecutor::tick(const rclcpp::Time & now)
     case DEALING:
       {
         auto time_since_dealing = (node_->now() - state_time_).seconds();
-        if (time_since_dealing > 30.0) {
-          RCLCPP_ERROR(
-            node_->get_logger(),
-            "Aborting %s. Timeout after requesting for 30 seconds", action_.c_str());
-          state_ = FAILURE;
+        RCLCPP_INFO(node_->get_logger(), "Time since dealing: %f", time_since_dealing);
+
+        if(time_since_dealing > late_timeout_){
+          RCLCPP_INFO(node_->get_logger(), "Time since dealing greater than late timeout");
+          if(at_least_one_node_responded_with_finite_cost()){
+            RCLCPP_INFO(node_->get_logger(), "Managing auction closure due to late timeout.");  
+            manage_auction_closure();
+          }
+          else{
+            RCLCPP_ERROR(
+                         node_->get_logger(),
+                         "Aborting %s. Timeout after requesting for %f seconds", action_.c_str(),
+                         late_timeout_);
+            state_ = FAILURE;
+          }
+        }
+        else if(time_since_dealing > early_timeout_ && all_nodes_already_responded() && at_least_one_node_has_finite_cost()){
+          RCLCPP_INFO(node_->get_logger(), "Managing auction closure due to early timeout.");
+          manage_auction_closure();
+        }
+        else{
+          RCLCPP_INFO(node_->get_logger(), "Waiting for performers to respond.");
+          //waiting agents performers responses
         }
       }
       break;
-
     case RUNNING:
       break;
     case SUCCESS:
@@ -264,15 +295,131 @@ ActionExecutor::get_params(const std::string & action_expr)
     ret.push_back(param);
     start = ((end > (std::string::npos - 1)) ? std::string::npos : end + 1);
   }
-
+  
   return ret;
 }
 
 void
 ActionExecutor::wait_timeout()
 {
-  RCLCPP_WARN(node_->get_logger(), "No action performer for %s. retrying", action_.c_str());
-  request_for_performers();
+  // RCLCPP_WARN(node_->get_logger(), "No action performer for %s. retrying", action_.c_str());
+  // request_for_performers();
+}
+
+// std::string
+// ActionExecutor::solve_auction()
+// {
+//   std::map<std::string, plansys2_msgs::msg::ActionExecution> response_action_executions;
+//   std::copy_if(involved_auction_nodes_.begin(), involved_auction_nodes_.end(), std::inserter(response_action_executions, response_action_executions.end()),
+//         [](const auto& involved_node) {
+//             return involved_node.second.type == plansys2_msgs::msg::ActionExecution::RESPONSE;
+//         });
+//   // plansys2_msgs::msg::ActionExecution cheapes_action_execution;
+//   auto cheapes_action_response = std::min_element(response_action_executions.begin(), response_action_executions.end(),
+//     [](const auto& lhs, const auto& rhs) {
+//         return lhs.second.action_cost.nominal_cost < rhs.second.action_cost.nominal_cost;
+//     });
+
+//   return (*cheapes_action_response).first;
+// }
+
+// plansys2::msg::ActionExecution
+// ActionExecutor::solve_auction()
+// {
+//   std::map<std::string, plansys2_msgs::msg::ActionExecution> response_action_executions;
+//   std::copy_if(involved_auction_nodes_.begin(), involved_auction_nodes_.end(), std::inserter(response_action_executions, response_action_executions.end()),
+//         [](const auto& involved_node) {
+//             return involved_node.second.type == plansys2_msgs::msg::ActionExecution::RESPONSE;
+//         });
+//   // plansys2_msgs::msg::ActionExecution cheapes_action_execution;
+//   auto cheapes_action_response = std::min_element(response_action_executions.begin(), response_action_executions.end(),
+//     [](const auto& lhs, const auto& rhs) {
+//         return lhs.second.action_cost.nominal_cost < rhs.second.action_cost.nominal_cost;
+//     });
+
+//   return (*cheapes_action_response).second;
+// }
+
+plansys2_msgs::msg::ActionExecution::SharedPtr
+ActionExecutor::solve_auction()
+{
+  RCLCPP_INFO( node_->get_logger(), "Solving auction for %s", action_.c_str());
+  std::map<std::string, plansys2_msgs::msg::ActionExecution> response_action_executions;
+  std::copy_if(involved_auction_nodes_.begin(), involved_auction_nodes_.end(), std::inserter(response_action_executions, response_action_executions.end()),
+        [](const auto& involved_node) {
+            return involved_node.second.type == plansys2_msgs::msg::ActionExecution::RESPONSE;
+        });
+  // plansys2_msgs::msg::ActionExecution cheapes_action_execution;
+  auto cheapest_action_execution = std::min_element(response_action_executions.begin(), response_action_executions.end(),
+    [](const auto& lhs, const auto& rhs) {
+        return lhs.second.action_cost.nominal_cost < rhs.second.action_cost.nominal_cost;
+    });
+
+  return std::make_shared<plansys2_msgs::msg::ActionExecution>((*cheapest_action_execution).second);
+}
+
+
+bool 
+ActionExecutor::all_nodes_already_responded()
+{
+  return std::all_of(involved_auction_nodes_.begin(), involved_auction_nodes_.end(),
+    [](const auto& involved_node) {
+        return (involved_node.second.type == plansys2_msgs::msg::ActionExecution::RESPONSE);
+    });
+}
+
+bool 
+ActionExecutor::at_least_one_node_already_responded()
+{
+  return std::any_of(involved_auction_nodes_.begin(), involved_auction_nodes_.end(),
+    [](const auto& involved_node) {
+        return (involved_node.second.type == plansys2_msgs::msg::ActionExecution::RESPONSE);
+    });
+}
+
+bool 
+ActionExecutor::at_least_one_node_responded_with_finite_cost()
+{
+  // for(const auto& involved_node : involved_auction_nodes_){
+  //   RCLCPP_INFO(node_->get_logger(), "Node %s has cost %f", involved_node.first.c_str(), involved_node.second.action_cost.nominal_cost);
+  //   RCLCPP_INFO(node_->get_logger(), "Node %s has type %d", involved_node.first.c_str(), involved_node.second.type);
+  // }
+  return std::any_of(involved_auction_nodes_.begin(), involved_auction_nodes_.end(),
+    [](const auto& involved_node) {
+        return (involved_node.second.type == plansys2_msgs::msg::ActionExecution::RESPONSE && involved_node.second.action_cost.nominal_cost != std::numeric_limits<double>::infinity());
+    });
+}
+
+bool
+ActionExecutor::at_least_one_node_has_finite_cost()
+{
+  return std::any_of(involved_auction_nodes_.begin(), involved_auction_nodes_.end(),
+    [](const auto& involved_node) {
+        return (involved_node.second.type == plansys2_msgs::msg::ActionExecution::RESPONSE && involved_node.second.action_cost.nominal_cost != std::numeric_limits<double>::infinity());
+    });
+
+}
+
+void ActionExecutor::reject_others_performers(const std::string & performer_node_id)
+{
+  std::for_each(involved_auction_nodes_.begin(), involved_auction_nodes_.end(),
+  [performer_node_id,this](const auto& involved_node) {
+      if (involved_node.second.node_id != performer_node_id) {
+        this->reject_performer(involved_node.second.node_id);
+      }
+  });
+}
+
+void ActionExecutor::manage_auction_closure()
+{
+  plansys2_msgs::msg::ActionExecution::SharedPtr performer = solve_auction(); 
+  confirm_performer(performer->node_id);
+  reject_others_performers(performer->node_id);
+  current_performer_id_ = performer->node_id;
+  state_ = RUNNING;
+  waiting_timer_ = nullptr;
+  start_execution_ = node_->now();
+  state_time_ = node_->now();
 }
 
 }  // namespace plansys2
