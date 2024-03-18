@@ -49,6 +49,7 @@ ActionExecutor::ActionExecutor(
 
   early_timeout_ = node->get_parameter("early_timeout").as_double();
   late_timeout_ = node->get_parameter("late_timeout").as_double();
+  confidence_quantile_ = node->get_parameter("confidence_quantile").as_double();
 
 }
 
@@ -70,21 +71,6 @@ ActionExecutor::action_hub_callback(const plansys2_msgs::msg::ActionExecution::S
         involved_auction_nodes_[msg->node_id] = *msg;
       }
       break;
-    // case plansys2_msgs::msg::ActionExecution::RESPONSE:
-    //   if (msg->arguments == action_params_ && msg->action == action_name_) {
-    //     if (state_ == DEALING) {
-    //       std::string performer = solve_auction(); 
-    //       confirm_performer(msg->node_id);
-    //       current_performer_id_ = msg->node_id;
-    //       state_ = RUNNING;
-    //       waiting_timer_ = nullptr;
-    //       start_execution_ = node_->now();
-    //       state_time_ = node_->now();
-    //     } else {
-    //       reject_performer(msg->node_id);
-    //     }
-    //   }
-    //   break;
     case plansys2_msgs::msg::ActionExecution::FEEDBACK:
       if (state_ != RUNNING || msg->arguments != action_params_ || msg->action != action_name_ ||
         msg->node_id != current_performer_id_)
@@ -351,8 +337,13 @@ ActionExecutor::solve_auction()
         });
   // plansys2_msgs::msg::ActionExecution cheapes_action_execution;
   auto cheapest_action_execution = std::min_element(response_action_executions.begin(), response_action_executions.end(),
-    [](const auto& lhs, const auto& rhs) {
-        return lhs.second.action_cost.nominal_cost < rhs.second.action_cost.nominal_cost;
+    [this](const auto& lhs, const auto& rhs) {
+      RCLCPP_INFO(node_->get_logger(), "Comparing %s with %s", lhs.first.c_str(), rhs.first.c_str());
+      RCLCPP_INFO(node_->get_logger(), "Confidence %f", confidence_quantile_);
+      RCLCPP_INFO(node_->get_logger(), "Std 1 %f", lhs.second.action_cost.std_dev_cost);
+      RCLCPP_INFO(node_->get_logger(), "Std 2 %f", rhs.second.action_cost.std_dev_cost);  
+      
+        return lhs.second.action_cost.nominal_cost + confidence_quantile_ * lhs.second.action_cost.std_dev_cost < rhs.second.action_cost.nominal_cost + confidence_quantile_ * rhs.second.action_cost.std_dev_cost;
     });
 
   return std::make_shared<plansys2_msgs::msg::ActionExecution>((*cheapest_action_execution).second);
