@@ -291,4 +291,14 @@ void ActionExecutorClient::set_action_cost(const ActionCostPtr & action_cost)
   action_cost_ = std::move(action_cost);
 }
 
+void ActionExecutorClient::set_action_cost(const ActionCostPtr & action_cost,
+                                           const plansys2_msgs::msg::ActionExecution::SharedPtr msg)
+{
+  std::cerr << "Setting action cost" << std::endl;
+  action_cost_ = std::move(action_cost);
+  std::cerr << "Setting action cost" << std::endl;
+  send_response(msg);
+  std::cerr << "Setting action cost" << std::endl;
+}
+
 }  // namespace plansys2

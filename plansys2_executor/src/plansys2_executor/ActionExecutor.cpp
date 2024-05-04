@@ -339,11 +339,13 @@ ActionExecutor::solve_auction()
   auto cheapest_action_execution = std::min_element(response_action_executions.begin(), response_action_executions.end(),
     [this](const auto& lhs, const auto& rhs) {
       RCLCPP_INFO(node_->get_logger(), "Comparing %s with %s", lhs.first.c_str(), rhs.first.c_str());
-      RCLCPP_INFO(node_->get_logger(), "Confidence %f", confidence_quantile_);
+      // RCLCPP_INFO(node_->get_logger(), "Confidence %f", confidence_quantile_);
+      RCLCPP_INFO(node_->get_logger(), "Nominal 1 %f", lhs.second.action_cost.nominal_cost);
+      RCLCPP_INFO(node_->get_logger(), "Nominal 2 %f", rhs.second.action_cost.nominal_cost);
       RCLCPP_INFO(node_->get_logger(), "Std 1 %f", lhs.second.action_cost.std_dev_cost);
       RCLCPP_INFO(node_->get_logger(), "Std 2 %f", rhs.second.action_cost.std_dev_cost);  
       
-        return lhs.second.action_cost.nominal_cost + confidence_quantile_ * lhs.second.action_cost.std_dev_cost < rhs.second.action_cost.nominal_cost + confidence_quantile_ * rhs.second.action_cost.std_dev_cost;
+      return lhs.second.action_cost.nominal_cost + confidence_quantile_ * lhs.second.action_cost.std_dev_cost < rhs.second.action_cost.nominal_cost + confidence_quantile_ * rhs.second.action_cost.std_dev_cost;
     });
 
   return std::make_shared<plansys2_msgs::msg::ActionExecution>((*cheapest_action_execution).second);

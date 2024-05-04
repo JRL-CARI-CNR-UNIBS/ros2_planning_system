@@ -37,6 +37,8 @@ class ActionExecutorClient : public rclcpp_cascade_lifecycle::CascadeLifecycleNo
 {
 public:
   using Ptr = std::shared_ptr<ActionExecutorClient>;
+  using ActionCostPtr = plansys2_msgs::msg::ActionCost::SharedPtr;
+
   static Ptr make_shared(const std::string & node_name, const std::chrono::nanoseconds & rate)
   {
     return std::make_shared<ActionExecutorClient>(node_name, rate);
@@ -48,6 +50,10 @@ public:
 
   rclcpp::Time get_start_time() const {return start_time_;}
   plansys2_msgs::msg::ActionPerformerStatus get_internal_status() const {return status_;}
+  void set_action_cost(double nominal_action_cost, double std_dev_action_cost);
+  void set_action_cost(const ActionCostPtr & action_cost);
+  void set_action_cost(const ActionCostPtr & action_cost, 
+                       const plansys2_msgs::msg::ActionExecution::SharedPtr msg);
 
 protected:
   virtual void do_work() {}
@@ -70,15 +76,12 @@ protected:
   // void send_action_bid();
   void finish(bool success, float completion, const std::string & status = "");
 
-  using ActionCostPtr = plansys2_msgs::msg::ActionCost::SharedPtr;
   virtual void compute_action_cost(const plansys2_msgs::msg::ActionExecution::SharedPtr msg)
   {
     action_cost_ = std::make_shared<plansys2_msgs::msg::ActionCost>();
     action_cost_->nominal_cost = 0.0;
     action_cost_->std_dev_cost = 0.0;
   } 
-  void set_action_cost(double nominal_action_cost, double std_dev_action_cost);
-  void set_action_cost(const ActionCostPtr & action_cost);
 
   std::chrono::nanoseconds rate_;
   std::string action_managed_;
