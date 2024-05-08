@@ -73,6 +73,7 @@ ExecutorNode::ExecutorNode()
   this->declare_parameter<double>("early_timeout", 2);
   this->declare_parameter<double>("late_timeout", 10);
   this->declare_parameter<double>("confidence_quantile", 1.65); // z s.t P(Z<z) = choosen_confidence (0.9505) https://itfeature.com/statistical-tables/standard-normal-table/ 
+  this->declare_parameter<bool>("use_auction_mechanism", true); // TODO(@samuele) change to false as default, ok for now
 
    // Declaring individual action parameters so they can be queried on the command line
   auto action_timeouts_actions = this->get_parameter("action_timeouts.actions").as_string_array();

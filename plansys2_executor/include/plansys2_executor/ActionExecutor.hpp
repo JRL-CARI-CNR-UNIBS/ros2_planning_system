@@ -96,6 +96,7 @@ protected:
   double early_timeout_;
   double late_timeout_;
   double confidence_quantile_;
+  bool use_auction_mechanism_;
   // TimeoutState timeout_state_ = TimeoutState::NONE;
 
   rclcpp_lifecycle::LifecyclePublisher<plansys2_msgs::msg::ActionExecution>::SharedPtr

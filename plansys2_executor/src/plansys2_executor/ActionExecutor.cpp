@@ -50,6 +50,7 @@ ActionExecutor::ActionExecutor(
   early_timeout_ = node->get_parameter("early_timeout").as_double();
   late_timeout_ = node->get_parameter("late_timeout").as_double();
   confidence_quantile_ = node->get_parameter("confidence_quantile").as_double();
+  use_auction_mechanism_ = node->get_parameter("use_auction_mechanism").as_bool();
 
 }
 
@@ -68,7 +69,12 @@ ActionExecutor::action_hub_callback(const plansys2_msgs::msg::ActionExecution::S
     case plansys2_msgs::msg::ActionExecution::WAIT:
     case plansys2_msgs::msg::ActionExecution::RESPONSE:
       if (msg->arguments == action_params_ && msg->action == action_name_) {
-        involved_auction_nodes_[msg->node_id] = *msg;
+        if (state_ == DEALING) {
+          involved_auction_nodes_[msg->node_id] = *msg;  // I could add in any case
+          if(!use_auction_mechanism_) {
+            manage_auction_closure();
+          }
+        }
       }
       break;
     case plansys2_msgs::msg::ActionExecution::FEEDBACK:
