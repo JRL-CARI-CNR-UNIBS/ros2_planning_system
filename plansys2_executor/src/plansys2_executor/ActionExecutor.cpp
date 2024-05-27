@@ -36,7 +36,8 @@ ActionExecutor::ActionExecutor(
   action_hub_sub_ = node_->create_subscription<plansys2_msgs::msg::ActionExecution>(
     "actions_hub", rclcpp::QoS(100).reliable(),
     std::bind(&ActionExecutor::action_hub_callback, this, _1));
-
+  RCLCPP_INFO(node->get_logger(), "---------------------------------------------");
+  RCLCPP_INFO(node->get_logger(), "ActionExecutor created for %s", action.c_str());
   RCLCPP_INFO(node->get_logger(), "Early timeout: %f", node->get_parameter("early_timeout").as_double());
   RCLCPP_INFO(node->get_logger(), "Late timeout: %f", node->get_parameter("late_timeout").as_double());
   state_time_ = node_->now();
@@ -51,7 +52,8 @@ ActionExecutor::ActionExecutor(
   late_timeout_ = node->get_parameter("late_timeout").as_double();
   confidence_quantile_ = node->get_parameter("confidence_quantile").as_double();
   use_auction_mechanism_ = node->get_parameter("use_auction_mechanism").as_bool();
-
+  RCLCPP_INFO(node->get_logger(), "use_auction_mechanism: %d", use_auction_mechanism_);
+  RCLCPP_INFO(node->get_logger(), "---------------------------------------------");
 }
 
 void
@@ -69,11 +71,22 @@ ActionExecutor::action_hub_callback(const plansys2_msgs::msg::ActionExecution::S
     case plansys2_msgs::msg::ActionExecution::WAIT:
     case plansys2_msgs::msg::ActionExecution::RESPONSE:
       if (msg->arguments == action_params_ && msg->action == action_name_) {
+        RCLCPP_INFO(node_->get_logger(), "PRE Received response for %s from %s", action_.c_str(), msg->node_id.c_str());
         if (state_ == DEALING) {
+          RCLCPP_INFO(node_->get_logger(), "Received response for %s from %s", action_.c_str(), msg->node_id.c_str());
           involved_auction_nodes_[msg->node_id] = *msg;  // I could add in any case
           if(!use_auction_mechanism_) {
-            manage_auction_closure();
+            RCLCPP_INFO(node_->get_logger(), "Managing auction closure due to no auction mechanism.");
+            confirm_performer(msg->node_id);
+            RCLCPP_INFO(node_->get_logger(), "Performer confirmed");
+            current_performer_id_ = msg->node_id;
+            RCLCPP_INFO(node_->get_logger(), "Current performer id set");
+            set_running_state();
+            RCLCPP_INFO(node_->get_logger(), "Running state set");
           }
+        }
+        else{
+          reject_performer(msg->node_id);
         }
       }
       break;
@@ -335,12 +348,19 @@ ActionExecutor::wait_timeout()
 plansys2_msgs::msg::ActionExecution::SharedPtr
 ActionExecutor::solve_auction()
 {
+  for(const auto& involved_node : involved_auction_nodes_){
+    RCLCPP_INFO(node_->get_logger(), "Node %s has cost %f", involved_node.first.c_str(), involved_node.second.action_cost.nominal_cost);
+    RCLCPP_INFO(node_->get_logger(), "Node %s has type %d", involved_node.first.c_str(), involved_node.second.type);
+    RCLCPP_INFO(node_->get_logger(), "Node %s has confidence %s", involved_node.first.c_str(), involved_node.second.node_id);
+    RCLCPP_INFO(node_->get_logger(), "Node %s has std dev %s", involved_node.first.c_str(), involved_node.second.action);
+  }
   RCLCPP_INFO( node_->get_logger(), "Solving auction for %s", action_.c_str());
   std::map<std::string, plansys2_msgs::msg::ActionExecution> response_action_executions;
   std::copy_if(involved_auction_nodes_.begin(), involved_auction_nodes_.end(), std::inserter(response_action_executions, response_action_executions.end()),
         [](const auto& involved_node) {
             return involved_node.second.type == plansys2_msgs::msg::ActionExecution::RESPONSE;
         });
+  RCLCPP_INFO(node_->get_logger(), "Number of response action executions %d", response_action_executions.size());
   // plansys2_msgs::msg::ActionExecution cheapes_action_execution;
   auto cheapest_action_execution = std::min_element(response_action_executions.begin(), response_action_executions.end(),
     [this](const auto& lhs, const auto& rhs) {
@@ -353,7 +373,7 @@ ActionExecutor::solve_auction()
       
       return lhs.second.action_cost.nominal_cost + confidence_quantile_ * lhs.second.action_cost.std_dev_cost < rhs.second.action_cost.nominal_cost + confidence_quantile_ * rhs.second.action_cost.std_dev_cost;
     });
-
+  RCLCPP_INFO(node_->get_logger(), "Cheapest action execution %s", (*cheapest_action_execution).first.c_str());
   return std::make_shared<plansys2_msgs::msg::ActionExecution>((*cheapest_action_execution).second);
 }
 
@@ -415,6 +435,11 @@ void ActionExecutor::manage_auction_closure()
   confirm_performer(performer->node_id);
   reject_others_performers(performer->node_id);
   current_performer_id_ = performer->node_id;
+  set_running_state();
+}
+
+void ActionExecutor::set_running_state()
+{
   state_ = RUNNING;
   waiting_timer_ = nullptr;
   start_execution_ = node_->now();

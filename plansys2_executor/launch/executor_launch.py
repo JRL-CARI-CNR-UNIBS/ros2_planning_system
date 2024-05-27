@@ -29,6 +29,7 @@ def generate_launch_description():
     start_action_bt_file = LaunchConfiguration('start_action_bt_file')
     end_action_bt_file = LaunchConfiguration('end_action_bt_file')
     bt_builder_plugin = LaunchConfiguration('bt_builder_plugin')
+    use_auction_mechanism = LaunchConfiguration('use_auction_mechanism')
 
     declare_namespace_cmd = DeclareLaunchArgument(
         'namespace',
@@ -61,6 +62,11 @@ def generate_launch_description():
         default_value='SimpleBTBuilder',
         description='Behavior tree builder plugin.',
     )
+    declare_use_auction_mechanism_cmd = DeclareLaunchArgument(
+        'use_auction_mechanism',
+        default_value='false',
+        description='Use auction mechanism to select the next action to execute',
+    )
 
     # Specify the actions
     executor_cmd = Node(
@@ -74,6 +80,7 @@ def generate_launch_description():
           {'default_start_action_bt_xml_filename': start_action_bt_file},
           {'default_end_action_bt_xml_filename': end_action_bt_file},
           {'bt_builder_plugin': bt_builder_plugin},
+          {'use_auction_mechanism': use_auction_mechanism},
           params_file
         ])
 
@@ -85,7 +92,8 @@ def generate_launch_description():
     ld.add_action(declare_start_action_bt_file_cmd)
     ld.add_action(declare_end_action_bt_file_cmd)
     ld.add_action(declare_bt_builder_plugin_cmd)
-
+    ld.add_action(declare_use_auction_mechanism_cmd)
+    
     # Declare the launch options
     ld.add_action(executor_cmd)
 

@@ -18,6 +18,3 @@ float32 completion
 string status
 
 plansys2_msgs/ActionCost action_cost
-
-
-

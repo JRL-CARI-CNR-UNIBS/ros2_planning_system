@@ -1,0 +1,6 @@
+plansys2_msgs/ActionExecution action_execution
+
+plansys2_msgs/ActionCost nominal_action_cost
+plansys2_msgs/ActionCost measured_action_cost
+plansys2_msgs/ActionCost estimated_action_cost
+plansys2_msgs/ActionCost residual_action_cost

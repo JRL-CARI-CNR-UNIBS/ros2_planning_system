@@ -35,6 +35,7 @@ def generate_launch_description():
     start_action_bt_file = LaunchConfiguration('start_action_bt_file')
     end_action_bt_file = LaunchConfiguration('end_action_bt_file')
     bt_builder_plugin = LaunchConfiguration('bt_builder_plugin')
+    use_auction_mechanism = LaunchConfiguration('use_auction_mechanism')
 
     declare_model_file_cmd = DeclareLaunchArgument(
         'model_file',
@@ -82,6 +83,12 @@ def generate_launch_description():
         description='Behavior tree builder plugin.',
     )
 
+    declare_use_auction_mechanism_cmd = DeclareLaunchArgument(
+        'use_auction_mechanism',
+        default_value='true',
+        description='Use auction mechanism to select the best plan.',
+    )
+
     domain_expert_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
             get_package_share_directory('plansys2_domain_expert'),
@@ -127,6 +134,7 @@ def generate_launch_description():
             'default_start_action_bt_xml_filename': start_action_bt_file,
             'default_end_action_bt_xml_filename': end_action_bt_file,
             'bt_builder_plugin': bt_builder_plugin,
+            'use_auction_mechanism': use_auction_mechanism,
         }.items())
 
     lifecycle_manager_cmd = Node(
@@ -148,6 +156,7 @@ def generate_launch_description():
     ld.add_action(declare_bt_builder_plugin_cmd)
     ld.add_action(declare_namespace_cmd)
     ld.add_action(declare_params_file_cmd)
+    ld.add_action(declare_use_auction_mechanism_cmd)
 
     # Declare the launch options
     ld.add_action(domain_expert_cmd)

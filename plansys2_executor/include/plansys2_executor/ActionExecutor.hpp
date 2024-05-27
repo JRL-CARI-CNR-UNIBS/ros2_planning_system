@@ -124,6 +124,9 @@ protected:
   bool at_least_one_node_already_responded();
   bool at_least_one_node_has_finite_cost();
   bool at_least_one_node_responded_with_finite_cost();
+
+private:
+  void set_running_state();
 };
 
 struct ActionExecutionInfo

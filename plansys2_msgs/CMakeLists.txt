@@ -12,6 +12,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Action.msg"
   "msg/ActionCost.msg"
   "msg/ActionExecution.msg"
+  "msg/ActionExecutionDataCollection.msg"
   "msg/ActionExecutionInfo.msg"
   "msg/ActionPerformerStatus.msg"
   "msg/DurativeAction.msg"

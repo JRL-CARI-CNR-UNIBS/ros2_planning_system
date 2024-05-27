@@ -145,6 +145,7 @@ ActionExecutorClient::action_hub_callback(const plansys2_msgs::msg::ActionExecut
       if (get_current_state().id() == lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE &&
         commited_ && msg->node_id == get_name())
       {
+        RCLCPP_INFO(get_logger(), "Received confirm for action %s", msg->action.c_str());
         current_arguments_ = msg->arguments;
         trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_ACTIVATE);
         commited_ = false;
@@ -224,8 +225,9 @@ ActionExecutorClient::send_feedback(float completion, const std::string & status
   msg_resp.arguments = current_arguments_;
   msg_resp.completion = completion;
   msg_resp.status = status;
-  msg_resp.action_cost = *action_cost_;
-
+  if(action_cost_){
+    msg_resp.action_cost = *action_cost_;
+  }
   action_hub_pub_->publish(msg_resp);
 }
 
@@ -288,17 +290,15 @@ void ActionExecutorClient::set_action_cost(double nominal_action_cost, double st
 
 void ActionExecutorClient::set_action_cost(const ActionCostPtr & action_cost)
 {
-  action_cost_ = std::move(action_cost);
+  action_cost_ = action_cost;
 }
 
 void ActionExecutorClient::set_action_cost(const ActionCostPtr & action_cost,
                                            const plansys2_msgs::msg::ActionExecution::SharedPtr msg)
 {
   std::cerr << "Setting action cost" << std::endl;
-  action_cost_ = std::move(action_cost);
-  std::cerr << "Setting action cost" << std::endl;
+  action_cost_ = action_cost;
   send_response(msg);
-  std::cerr << "Setting action cost" << std::endl;
 }
 
 }  // namespace plansys2

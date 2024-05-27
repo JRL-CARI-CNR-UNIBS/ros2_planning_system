@@ -70,7 +70,7 @@ protected:
   void action_hub_callback(const plansys2_msgs::msg::ActionExecution::SharedPtr msg);
 
   bool should_execute(const std::string & action, const std::vector<std::string> & args);
-  void send_response(const plansys2_msgs::msg::ActionExecution::SharedPtr msg);
+  virtual void send_response(const plansys2_msgs::msg::ActionExecution::SharedPtr msg);
   void send_feedback(float completion, const std::string & status = "");
   void send_wait(const plansys2_msgs::msg::ActionExecution::SharedPtr msg);
   // void send_action_bid();

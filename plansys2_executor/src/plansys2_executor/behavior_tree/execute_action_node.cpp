@@ -58,6 +58,7 @@ ExecuteAction::tick()
   auto action_expr = action.substr(0, delim);
 
   if ((*action_map_)[action].action_executor == nullptr) {
+    RCLCPP_INFO(node->get_logger(), "ActionExecutor for %s is not initialized", action.c_str());
     (*action_map_)[action].action_executor = ActionExecutor::make_shared(action_expr, node_);
   }
 
