@@ -201,6 +201,13 @@ ProblemExpertNode::ProblemExpertNode()
       this, std::placeholders::_1, std::placeholders::_2,
       std::placeholders::_3));
 
+  update_problem_functions_from_problem_service_ = create_service<plansys2_msgs::srv::AddProblem>(
+    "problem_expert/update_problem_functions_from_problem",
+    std::bind(
+      &ProblemExpertNode::update_problem_functions_from_problem_service_callback,
+      this, std::placeholders::_1, std::placeholders::_2,
+      std::placeholders::_3));
+
   update_pub_ = create_publisher<std_msgs::msg::Empty>(
     "problem_expert/update_notify",
     rclcpp::QoS(100));
@@ -732,6 +739,25 @@ ProblemExpertNode::update_problem_function_service_callback(
       update_pub_->publish(std_msgs::msg::Empty());
     } else {
       response->error_info = "Function not valid";
+    }
+  }
+}
+
+void
+ProblemExpertNode::update_problem_functions_from_problem_service_callback(
+  const std::shared_ptr<rmw_request_id_t> request_header,
+  const std::shared_ptr<plansys2_msgs::srv::AddProblem::Request> request,
+  const std::shared_ptr<plansys2_msgs::srv::AddProblem::Response> response)
+{
+  if (problem_expert_ == nullptr) {
+    response->success = false;
+    response->error_info = "Requesting service in non-active state";
+  } else {
+    response->success = problem_expert_->updateFunctionsFromUpdatedProblem(request->problem);
+    if (response->success) {
+      update_pub_->publish(std_msgs::msg::Empty());
+    } else {
+      response->error_info = "Problem not valid";
     }
   }
 }

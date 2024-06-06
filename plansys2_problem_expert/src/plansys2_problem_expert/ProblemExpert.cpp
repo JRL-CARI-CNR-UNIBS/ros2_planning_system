@@ -688,6 +688,59 @@ ProblemExpert::getProblem()
   return stream.str();
 }
 
+bool 
+ProblemExpert::updateFunctionsFromUpdatedProblem(const std::string & updated_problem_str)
+{
+  if (updated_problem_str.empty()) {
+    std::cerr << "Empty problem." << std::endl;
+    return false;
+  }
+  parser::pddl::Domain domain(domain_expert_->getDomain());
+
+  std::string lc_problem = updated_problem_str;
+  std::transform(
+  updated_problem_str.begin(), updated_problem_str.end(), lc_problem.begin(),
+  [](unsigned char c) {return std::tolower(c);});
+
+  lc_problem = remove_comments(lc_problem);
+  parser::pddl::Instance problem(domain);
+
+  std::string domain_name = problem.getDomainName(lc_problem);
+  if (domain_name.empty()) {
+    std::cerr << "Domain name is empty" << std::endl;
+    return false;
+  } else if (!domain_expert_->existDomain(domain_name)) {
+    std::cerr << "Domain name does not exist: " << domain_name << std::endl;
+    return false;
+  }
+  domain.name = domain_name;
+  try {
+    problem.parse(lc_problem);
+  } catch (std::runtime_error ex) {
+    // all errors thrown by the Stringreader object extend std::runtime_error
+    std::cerr << ex.what() << std::endl;
+    return false;
+  }
+
+  plansys2_msgs::msg::Tree tree;
+  for (auto ground : problem.init) {
+    auto tree_node = ground->getTree(tree, domain);
+    if(tree_node->node_type == plansys2_msgs::msg::Node::FUNCTION)
+    {
+      plansys2::Function func_node(*tree_node);
+      std::cout << "Updating function: " <<
+        parser::pddl::toString(tree, tree_node->node_id) << std::endl;
+      if (!updateFunction(func_node)) {
+        std::cerr << "Failed to update function: " << parser::pddl::toString(
+          tree,
+          tree_node->node_id) <<
+          std::endl;
+      }
+    }
+  }
+  return true;
+}
+
 bool
 ProblemExpert::addProblem(const std::string & problem_str)
 {

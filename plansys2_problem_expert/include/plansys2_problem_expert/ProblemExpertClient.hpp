@@ -66,6 +66,8 @@ public:
   bool removeFunction(const plansys2::Function & function);
   bool existFunction(const plansys2::Function & function);
   bool updateFunction(const plansys2::Function & function);
+  bool updateFunctionsFromUpdatedProblem(const std::string & updated_problem_str);
+  
   std::optional<plansys2::Function> getFunction(const std::string & function);
 
   plansys2::Goal getGoal();
@@ -123,6 +125,8 @@ private:
     exist_problem_function_client_;
   rclcpp::Client<plansys2_msgs::srv::AffectNode>::SharedPtr
     update_problem_function_client_;
+  rclcpp::Client<plansys2_msgs::srv::AddProblem>::SharedPtr
+    update_problem_functions_from_problem_client_;
   rclcpp::Client<plansys2_msgs::srv::IsProblemGoalSatisfied>::SharedPtr
     is_problem_goal_satisfied_client_;
   rclcpp::Node::SharedPtr node_;

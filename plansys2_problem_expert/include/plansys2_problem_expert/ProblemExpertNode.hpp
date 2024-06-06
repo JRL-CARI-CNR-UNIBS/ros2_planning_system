@@ -171,7 +171,11 @@ public:
     const std::shared_ptr<rmw_request_id_t> request_header,
     const std::shared_ptr<plansys2_msgs::srv::AffectNode::Request> request,
     const std::shared_ptr<plansys2_msgs::srv::AffectNode::Response> response);
-
+  void update_problem_functions_from_problem_service_callback(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<plansys2_msgs::srv::AddProblem::Request> request,
+    const std::shared_ptr<plansys2_msgs::srv::AddProblem::Response> response);
+    
 private:
   std::shared_ptr<ProblemExpert> problem_expert_;
 
@@ -219,6 +223,8 @@ private:
     exist_problem_function_service_;
   rclcpp::Service<plansys2_msgs::srv::AffectNode>::SharedPtr
     update_problem_function_service_;
+  rclcpp::Service<plansys2_msgs::srv::AddProblem>::SharedPtr
+    update_problem_functions_from_problem_service_;
 
   rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::Empty>::SharedPtr update_pub_;
   rclcpp_lifecycle::LifecyclePublisher<plansys2_msgs::msg::Knowledge>::SharedPtr knowledge_pub_;

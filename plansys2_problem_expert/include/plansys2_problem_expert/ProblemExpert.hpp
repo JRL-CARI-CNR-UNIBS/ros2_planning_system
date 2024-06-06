@@ -63,6 +63,7 @@ public:
 
   std::string getProblem();
   bool addProblem(const std::string & problem_str);
+  bool updateFunctionsFromUpdatedProblem(const std::string & updated_problem_str);
 
   bool existInstance(const std::string & name);
   bool isValidType(const std::string & type);
