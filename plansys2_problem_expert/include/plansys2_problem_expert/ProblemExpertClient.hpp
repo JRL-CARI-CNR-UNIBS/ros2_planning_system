@@ -49,6 +49,7 @@ class ProblemExpertClient : public ProblemExpertInterface
 {
 public:
   ProblemExpertClient();
+  ProblemExpertClient(const std::string & node_name);
 
   std::vector<plansys2::Instance> getInstances();
   bool addInstance(const plansys2::Instance & instance);

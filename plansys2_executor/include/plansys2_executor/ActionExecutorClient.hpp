@@ -69,7 +69,7 @@ protected:
   virtual CallbackReturnT on_deactivate(const rclcpp_lifecycle::State & state);
   void action_hub_callback(const plansys2_msgs::msg::ActionExecution::SharedPtr msg);
 
-  bool should_execute(const std::string & action, const std::vector<std::string> & args);
+  virtual bool should_execute(const std::string & action, const std::vector<std::string> & args);
   virtual void send_response(const plansys2_msgs::msg::ActionExecution::SharedPtr msg);
   void send_feedback(float completion, const std::string & status = "");
   void send_wait(const plansys2_msgs::msg::ActionExecution::SharedPtr msg);

@@ -53,6 +53,7 @@ class DomainExpertClient : public DomainExpertInterface
 public:
   /// Create a new DomainExpertClient.
   DomainExpertClient();
+  DomainExpertClient(const std::string & node_name);
 
   /// Get the domain name.
   /**
