@@ -350,9 +350,9 @@ ActionExecutor::solve_auction()
 {
   for(const auto& involved_node : involved_auction_nodes_){
     RCLCPP_INFO(node_->get_logger(), "Node %s has cost %f", involved_node.first.c_str(), involved_node.second.action_cost.nominal_cost);
+    RCLCPP_INFO(node_->get_logger(), "Node %s has std dev %f", involved_node.first.c_str(), involved_node.second.action_cost.std_dev_cost);
     RCLCPP_INFO(node_->get_logger(), "Node %s has type %d", involved_node.first.c_str(), involved_node.second.type);
-    RCLCPP_INFO(node_->get_logger(), "Node %s has confidence %s", involved_node.first.c_str(), involved_node.second.node_id);
-    RCLCPP_INFO(node_->get_logger(), "Node %s has std dev %s", involved_node.first.c_str(), involved_node.second.action);
+    // RCLCPP_INFO(node_->get_logger(), "Node %s has confidence %s", involved_node.first.c_str(), involved_node.second.node_id);
   }
   RCLCPP_INFO( node_->get_logger(), "Solving auction for %s", action_.c_str());
   std::map<std::string, plansys2_msgs::msg::ActionExecution> response_action_executions;

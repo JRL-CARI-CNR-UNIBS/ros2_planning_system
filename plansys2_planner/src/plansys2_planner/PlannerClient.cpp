@@ -35,7 +35,7 @@ PlannerClient::PlannerClient()
   node_->get_parameter("plan_solver_timeout", timeout);
   solver_timeout_ = rclcpp::Duration((int32_t)timeout, 0);
   RCLCPP_INFO(
-    node_->get_logger(), "Planner CLient created with timeout %g",
+    node_->get_logger(), "Planner Client created with timeout %g",
     solver_timeout_.seconds());
 }
 
