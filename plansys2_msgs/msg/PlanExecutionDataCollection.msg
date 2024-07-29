@@ -1,0 +1,5 @@
+plansys2_msgs/Plan plan
+plansys2_msgs/ActionExecutionInfo[] action_execution_status
+
+builtin_interfaces/Time t_start
+builtin_interfaces/Time t_end
