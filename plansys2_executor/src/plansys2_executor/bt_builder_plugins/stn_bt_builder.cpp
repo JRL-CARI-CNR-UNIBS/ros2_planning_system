@@ -317,6 +317,10 @@ STNBTBuilder::get_plan_actions(const plansys2_msgs::msg::Plan & plan) const
 
     ret.push_back(action_stamped);
   }
+  std::sort(ret.begin(), ret.end(), [](const ActionStamped &a, const ActionStamped &b) {
+    return a.time < b.time;
+  });
+
 
   return ret;
 }
