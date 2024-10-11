@@ -198,6 +198,89 @@ TEST(planner_expert, generate_plan_with_domain_constants)
   t.join();
 }
 
+TEST(planner_expert, retrieve_plan_test)
+{
+  auto test_node = rclcpp::Node::make_shared("test_node");
+  auto domain_node = std::make_shared<plansys2::DomainExpertNode>();
+  auto problem_node = std::make_shared<plansys2::ProblemExpertNode>();
+  auto planner_node = std::make_shared<plansys2::PlannerNode>();
+  auto problem_client = std::make_shared<plansys2::ProblemExpertClient>();
+  auto domain_client = std::make_shared<plansys2::DomainExpertClient>();
+  auto planner_client = std::make_shared<plansys2::PlannerClient>();
+
+  std::string pkgpath = ament_index_cpp::get_package_share_directory("plansys2_planner");
+
+  domain_node->set_parameter({"model_file", pkgpath + "/pddl/domain_simple.pddl"});
+  problem_node->set_parameter({"model_file", pkgpath + "/pddl/domain_simple.pddl"});
+
+  rclcpp::executors::MultiThreadedExecutor exe(rclcpp::ExecutorOptions(), 8);
+
+  exe.add_node(domain_node->get_node_base_interface());
+  exe.add_node(problem_node->get_node_base_interface());
+  exe.add_node(planner_node->get_node_base_interface());
+
+  bool finish = false;
+  std::thread t([&]() {
+      while (!finish) {exe.spin_some();}
+    });
+
+
+  domain_node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_CONFIGURE);
+  problem_node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_CONFIGURE);
+
+  planner_node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_CONFIGURE);
+
+  {
+    rclcpp::Rate rate(10);
+    auto start = test_node->now();
+    while ((test_node->now() - start).seconds() < 0.5) {
+      rate.sleep();
+    }
+  }
+
+  domain_node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_ACTIVATE);
+  problem_node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_ACTIVATE);
+  planner_node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_ACTIVATE);
+
+  {
+    rclcpp::Rate rate(10);
+    auto start = test_node->now();
+    while ((test_node->now() - start).seconds() < 0.5) {
+      rate.sleep();
+    }
+  }
+
+  problem_client->addInstance(plansys2::Instance("leia", "robot"));
+  problem_client->addInstance(plansys2::Instance("francisco", "person"));
+  problem_client->addInstance(plansys2::Instance("message1", "message"));
+
+  problem_client->addInstance(plansys2::Instance("bedroom", "room"));
+  problem_client->addInstance(plansys2::Instance("kitchen", "room"));
+  problem_client->addInstance(plansys2::Instance("corridor", "room"));
+
+  std::vector<std::string> predicates = {
+    "(robot_at leia kitchen)",
+    "(person_at francisco bedroom)"};
+
+  for (const auto & pred : predicates) {
+    problem_client->addPredicate(plansys2::Predicate(pred));
+  }
+
+  problem_client->setGoal(plansys2::Goal("(and (robot_talk leia message1 francisco))"));
+
+  auto plan = planner_client->getPlan(domain_client->getDomain(), problem_client->getProblem());
+
+  auto retrieved_plan = planner_client->retrievePlan();
+  ASSERT_TRUE(retrieved_plan.has_value());
+  ASSERT_EQ(plan.value().items.size(), retrieved_plan.value().items.size());
+  for (size_t i = 0; i < plan.value().items.size(); i++) {
+    ASSERT_EQ(plan.value().items[i].action, retrieved_plan.value().items[i].action);
+    ASSERT_EQ(plan.value().items[i].duration, retrieved_plan.value().items[i].duration);
+  }
+  finish = true;
+  t.join();
+}
+
 int main(int argc, char ** argv)
 {
   testing::InitGoogleTest(&argc, argv);

@@ -29,6 +29,7 @@
 #include "lifecycle_msgs/msg/state.hpp"
 #include "lifecycle_msgs/msg/transition.hpp"
 #include "plansys2_msgs/srv/get_plan.hpp"
+#include "plansys2_msgs/srv/retrieve_plan.hpp"
 #include "plansys2_msgs/srv/validate_domain.hpp"
 
 #include "rclcpp/rclcpp.hpp"
@@ -62,6 +63,11 @@ public:
     const std::shared_ptr<plansys2_msgs::srv::GetPlan::Request> request,
     const std::shared_ptr<plansys2_msgs::srv::GetPlan::Response> response);
 
+  void retrieve_plan_service_callback(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<plansys2_msgs::srv::RetrievePlan::Request> request,
+    const std::shared_ptr<plansys2_msgs::srv::RetrievePlan::Response> response);
+
   void validate_domain_service_callback(
     const std::shared_ptr<rmw_request_id_t> request_header,
     const std::shared_ptr<plansys2_msgs::srv::ValidateDomain::Request> request,
@@ -80,6 +86,9 @@ private:
     get_plan_service_;
   rclcpp::Service<plansys2_msgs::srv::ValidateDomain>::SharedPtr
     validate_domain_service_;
+  rclcpp::Service<plansys2_msgs::srv::RetrievePlan>::SharedPtr
+    retrieve_plan_service_;
+  plansys2_msgs::msg::Plan::SharedPtr plan_;
 };
 
 template<typename NodeT>

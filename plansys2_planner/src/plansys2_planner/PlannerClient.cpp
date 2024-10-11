@@ -28,6 +28,8 @@ PlannerClient::PlannerClient()
   node_ = rclcpp::Node::make_shared("planner_client");
 
   get_plan_client_ = node_->create_client<plansys2_msgs::srv::GetPlan>("planner/get_plan");
+  retrieve_plan_client_ = node_->create_client<plansys2_msgs::srv::RetrievePlan>(
+    "planner/retrieve_plan");
 
   double timeout;
   node_->declare_parameter("plan_solver_timeout", timeout);
@@ -90,6 +92,42 @@ PlannerClient::getPlan(
     RCLCPP_ERROR_STREAM(
       node_->get_logger(),
       get_plan_client_->get_service_name() << ": " <<
+        result.error_info);
+    return {};
+  }
+}
+
+std::optional<plansys2_msgs::msg::Plan>
+PlannerClient::retrievePlan(const std::string & node_namespace)
+{
+  while (!retrieve_plan_client_->wait_for_service(std::chrono::seconds(5))) {
+    if (!rclcpp::ok()) {
+      return {};
+    }
+    RCLCPP_ERROR_STREAM(
+      node_->get_logger(),
+      retrieve_plan_client_->get_service_name() <<
+        " service client: waiting for service to appear...");
+  }
+
+  auto request = std::make_shared<plansys2_msgs::srv::RetrievePlan::Request>();
+
+  auto future_result = retrieve_plan_client_->async_send_request(request);
+
+  auto outresult = rclcpp::spin_until_future_complete(
+    node_, future_result);
+  if (outresult != rclcpp::FutureReturnCode::SUCCESS) {
+    return {};
+  }
+
+  auto result = *future_result.get();
+
+  if (result.success) {
+    return result.plan;
+  } else {
+    RCLCPP_WARN_STREAM(
+      node_->get_logger(),
+      retrieve_plan_client_->get_service_name() << ": " <<
         result.error_info);
     return {};
   }

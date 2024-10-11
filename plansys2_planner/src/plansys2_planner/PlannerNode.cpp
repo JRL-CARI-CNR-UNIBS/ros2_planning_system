@@ -101,6 +101,13 @@ PlannerNode::on_configure(const rclcpp_lifecycle::State & state)
       this, std::placeholders::_1, std::placeholders::_2,
       std::placeholders::_3));
 
+  retrieve_plan_service_ = create_service<plansys2_msgs::srv::RetrievePlan>(
+    "planner/retrieve_plan",
+    std::bind(
+      &PlannerNode::retrieve_plan_service_callback,
+      this, std::placeholders::_1, std::placeholders::_2,
+      std::placeholders::_3));
+
   validate_domain_service_ = create_service<plansys2_msgs::srv::ValidateDomain>(
     "planner/validate_domain",
     std::bind(
@@ -161,15 +168,32 @@ PlannerNode::get_plan_service_callback(
   const std::shared_ptr<plansys2_msgs::srv::GetPlan::Request> request,
   const std::shared_ptr<plansys2_msgs::srv::GetPlan::Response> response)
 {
+  plan_.reset();
   auto plan = solvers_.begin()->second->getPlan(
     request->domain, request->problem, get_namespace(), solver_timeout_);
 
   if (plan) {
+    plan_ = std::make_shared<plansys2_msgs::msg::Plan>(plan.value());
     response->success = true;
-    response->plan = plan.value();
+    response->plan = *plan_;
   } else {
     response->success = false;
     response->error_info = "Plan not found";
+  }
+}
+
+void
+PlannerNode::retrieve_plan_service_callback(
+  const std::shared_ptr<rmw_request_id_t> request_header,
+  const std::shared_ptr<plansys2_msgs::srv::RetrievePlan::Request> request,
+  const std::shared_ptr<plansys2_msgs::srv::RetrievePlan::Response> response)
+{
+  if (plan_) {
+    response->success = true;
+    response->plan = *plan_;
+  } else {
+    response->success = false;
+    response->error_info = "No plan available";
   }
 }
 
