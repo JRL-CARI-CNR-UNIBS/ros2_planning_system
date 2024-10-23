@@ -3,3 +3,5 @@ plansys2_msgs/ActionExecutionInfo[] action_execution_status
 
 builtin_interfaces/Time t_start
 builtin_interfaces/Time t_end
+float32 expected_value
+float32 std_dev
