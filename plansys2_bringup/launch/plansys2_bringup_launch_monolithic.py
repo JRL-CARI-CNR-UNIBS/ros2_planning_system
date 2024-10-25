@@ -35,6 +35,7 @@ def generate_launch_description():
     end_action_bt_file = LaunchConfiguration('end_action_bt_file')
     bt_builder_plugin = LaunchConfiguration('bt_builder_plugin')
     use_auction_mechanism = LaunchConfiguration('use_auction_mechanism')
+    early_timeout = LaunchConfiguration('early_timeout')
 
     declare_model_file_cmd = DeclareLaunchArgument(
         'model_file',
@@ -83,6 +84,12 @@ def generate_launch_description():
         description='Use auction mechanism to select the best plan.',
     )
 
+    declare_early_timeout_cmd = DeclareLaunchArgument(
+        'early_timeout',
+        default_value='0.1',
+        description='Auction early timeout.',
+    )
+
     plansys2_node_cmd = Node(
         package='plansys2_bringup',
         executable='plansys2_node',
@@ -96,9 +103,12 @@ def generate_launch_description():
             'default_end_action_bt_xml_filename': end_action_bt_file,
             'bt_builder_plugin': bt_builder_plugin,
             'use_auction_mechanism': use_auction_mechanism,
+            'early_timeout': early_timeout
           },
           params_file
-        ])
+        ]
+    )
+        # prefix=['gnome-terminal -- gdb -ex run --args'],
 
     # Create the launch description and populate
     ld = LaunchDescription()
@@ -111,6 +121,7 @@ def generate_launch_description():
     ld.add_action(declare_namespace_cmd)
     ld.add_action(declare_params_file_cmd)
     ld.add_action(declare_use_auction_mechanism_cmd)
+    ld.add_action(declare_early_timeout_cmd)
 
     # Declare the launch options
     ld.add_action(plansys2_node_cmd)
