@@ -136,8 +136,8 @@ ExecutorNode::on_configure(const rclcpp_lifecycle::State & state)
     this->get_parameter("default_action_bt_xml_filename").as_string();
   if (default_action_bt_xml_filename.empty()) {
     default_action_bt_xml_filename =
-          ament_index_cpp::get_package_share_directory("plansys2_executor") +
-          "/behavior_trees/plansys2_action_bt.xml";
+      ament_index_cpp::get_package_share_directory("plansys2_executor") +
+      "/behavior_trees/plansys2_action_bt.xml";
   }
 
   std::ifstream action_bt_ifs(default_action_bt_xml_filename);
@@ -152,7 +152,7 @@ ExecutorNode::on_configure(const rclcpp_lifecycle::State & state)
   auto default_start_action_bt_xml_filename =
     this->get_parameter("default_start_action_bt_xml_filename").as_string();
   if (default_start_action_bt_xml_filename.empty()) {
-      default_start_action_bt_xml_filename =
+    default_start_action_bt_xml_filename =
       ament_index_cpp::get_package_share_directory("plansys2_executor") +
       "/behavior_trees/plansys2_start_action_bt.xml";
 
@@ -195,7 +195,8 @@ ExecutorNode::on_configure(const rclcpp_lifecycle::State & state)
     "remaining_plan", rclcpp::QoS(100));
 
   domain_client_ = std::make_shared<plansys2::DomainExpertClient>("executor_domain_expert_client");
-  problem_client_ = std::make_shared<plansys2::ProblemExpertClient>("executor_problem_expert_client");
+  problem_client_ =
+    std::make_shared<plansys2::ProblemExpertClient>("executor_problem_expert_client");
   planner_client_ = std::make_shared<plansys2::PlannerClient>("executor_planner_client");
 
   RCLCPP_INFO(get_logger(), "[%s] Configured", get_name());
