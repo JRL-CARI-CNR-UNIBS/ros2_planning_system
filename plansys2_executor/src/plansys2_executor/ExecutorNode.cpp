@@ -155,7 +155,6 @@ ExecutorNode::on_configure(const rclcpp_lifecycle::State & state)
     default_start_action_bt_xml_filename =
       ament_index_cpp::get_package_share_directory("plansys2_executor") +
       "/behavior_trees/plansys2_start_action_bt.xml";
-
   }
 
   std::ifstream start_action_bt_ifs(default_start_action_bt_xml_filename);
