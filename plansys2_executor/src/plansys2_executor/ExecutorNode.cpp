@@ -135,10 +135,9 @@ ExecutorNode::on_configure(const rclcpp_lifecycle::State & state)
   auto default_action_bt_xml_filename =
     this->get_parameter("default_action_bt_xml_filename").as_string();
   if (default_action_bt_xml_filename.empty()) {
-    std::filesystem::path pkg_path;
-    ament_index_cpp::get_package_share_directory("plansys2_executor", pkg_path);
     default_action_bt_xml_filename =
-      (pkg_path / "behavior_trees" / "plansys2_action_bt.xml").string();
+          ament_index_cpp::get_package_share_directory("plansys2_executor") +
+          "/behavior_trees/plansys2_action_bt.xml";
   }
 
   std::ifstream action_bt_ifs(default_action_bt_xml_filename);
@@ -153,10 +152,10 @@ ExecutorNode::on_configure(const rclcpp_lifecycle::State & state)
   auto default_start_action_bt_xml_filename =
     this->get_parameter("default_start_action_bt_xml_filename").as_string();
   if (default_start_action_bt_xml_filename.empty()) {
-    std::filesystem::path pkg_path;
-    ament_index_cpp::get_package_share_directory("plansys2_executor", pkg_path);
-    default_start_action_bt_xml_filename =
-      (pkg_path / "behavior_trees" / "plansys2_start_action_bt.xml").string();
+      default_start_action_bt_xml_filename =
+      ament_index_cpp::get_package_share_directory("plansys2_executor") +
+      "/behavior_trees/plansys2_start_action_bt.xml";
+
   }
 
   std::ifstream start_action_bt_ifs(default_start_action_bt_xml_filename);
@@ -172,10 +171,9 @@ ExecutorNode::on_configure(const rclcpp_lifecycle::State & state)
   auto default_end_action_bt_xml_filename =
     this->get_parameter("default_end_action_bt_xml_filename").as_string();
   if (default_end_action_bt_xml_filename.empty()) {
-    std::filesystem::path pkg_path;
-    ament_index_cpp::get_package_share_directory("plansys2_executor", pkg_path);
     default_end_action_bt_xml_filename =
-      (pkg_path / "behavior_trees" / "plansys2_end_action_bt.xml").string();
+      ament_index_cpp::get_package_share_directory("plansys2_executor") +
+      "/behavior_trees/plansys2_end_action_bt.xml";
   }
 
   std::ifstream end_action_bt_ifs(default_end_action_bt_xml_filename);
