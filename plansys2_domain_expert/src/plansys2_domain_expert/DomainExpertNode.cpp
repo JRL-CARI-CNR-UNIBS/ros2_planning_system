@@ -106,6 +106,11 @@ DomainExpertNode::DomainExpertNode(const rclcpp::NodeOptions & options)
       &DomainExpertNode::get_domain_service_callback,
       this, std::placeholders::_1, std::placeholders::_2,
       std::placeholders::_3));
+  extend_domain_service_ = create_service<plansys2_msgs::srv::ExtendDomain>(
+    "domain_expert/extend_domain", std::bind(
+      &DomainExpertNode::extend_domain_service_callback,
+      this, std::placeholders::_1, std::placeholders::_2,
+      std::placeholders::_3));
   domain_pub_ = create_publisher<std_msgs::msg::String>(
     "domain_expert/domain",
     rclcpp::QoS(100).transient_local());
@@ -121,12 +126,12 @@ DomainExpertNode::on_configure(const rclcpp_lifecycle::State & state)
   (void)state;
   RCLCPP_INFO(get_logger(), "[%s] Configuring...", get_name());
   const std::string model_file = get_parameter("model_file").get_value<std::string>();
-  const bool validate_using_planner_node =
+  validate_using_planner_node_ =
     get_parameter("validate_using_planner_node").get_value<bool>();
 
   auto model_files = tokenize(model_file, ":");
 
-  if (validate_using_planner_node) {
+  if (validate_using_planner_node_) {
     validate_domain_client_ = create_client<plansys2_msgs::srv::ValidateDomain>(
       "planner/validate_domain", rclcpp::ServicesQoS(), validate_domain_callback_group_);
     while (!validate_domain_client_->wait_for_service(std::chrono::seconds(3))) {
@@ -152,24 +157,10 @@ DomainExpertNode::on_configure(const rclcpp_lifecycle::State & state)
       domain_expert_->extendDomain(domain_str);
     }
 
-    bool check_valid = true;
-    if (validate_using_planner_node) {
-      auto request = std::make_shared<plansys2_msgs::srv::ValidateDomain::Request>();
-      request->domain = domain_expert_->getDomain();
-      auto future_result = validate_domain_client_->async_send_request(std::move(request));
-      if (future_result.wait_for(std::chrono::seconds(3)) != std::future_status::ready) {
-        RCLCPP_ERROR(
-          get_logger(), "Timed out waiting for service: %s",
-          validate_domain_client_->get_service_name());
-        return CallbackReturnT::FAILURE;
-      }
-      check_valid = future_result.get()->success;
-    } else {
-      check_valid = popf_plan_solver_->isDomainValid(domain_expert_->getDomain(), get_namespace());
-    }
-
+    std::string error_info;
+    bool check_valid = validate_current_domain(error_info);
     if (!check_valid) {
-      RCLCPP_ERROR_STREAM(get_logger(), "PDDL syntax error");
+      RCLCPP_ERROR_STREAM(get_logger(), error_info);
       return CallbackReturnT::FAILURE;
     }
   }
@@ -523,6 +514,71 @@ DomainExpertNode::get_domain_service_callback(
     stream << domain_expert_->getDomain();
     response->domain = stream.str();
   }
+}
+
+void
+DomainExpertNode::extend_domain_service_callback(
+  const std::shared_ptr<rmw_request_id_t> request_header,
+  const std::shared_ptr<plansys2_msgs::srv::ExtendDomain::Request> request,
+  const std::shared_ptr<plansys2_msgs::srv::ExtendDomain::Response> response)
+{
+  (void)request_header;
+  if (domain_expert_ == nullptr) {
+    response->success = false;
+    response->error_info = "Requesting service in non-active state";
+    RCLCPP_WARN(get_logger(), "Requesting service in non-active state");
+    return;
+  }
+
+  try {
+    domain_expert_->extendDomain(request->extension);
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR_STREAM(get_logger(), "Failed to extend domain: " << e.what());
+    response->success = false;
+    response->error_info = e.what();
+  }
+
+  std::string error_info;
+  bool check_valid = validate_current_domain(error_info);
+  if (!check_valid) {
+    RCLCPP_ERROR_STREAM(get_logger(), error_info);
+    response->success = false;
+    response->error_info = error_info;
+  } else {
+    response->success = true;
+  }
+}
+
+bool
+DomainExpertNode::validate_current_domain(std::string & error_info)
+{
+  bool check_valid = true;
+
+  if (validate_using_planner_node_) {
+    auto request = std::make_shared<plansys2_msgs::srv::ValidateDomain::Request>();
+    request->domain = domain_expert_->getDomain();
+    auto future_result = validate_domain_client_->async_send_request(std::move(request));
+
+    if (future_result.wait_for(std::chrono::seconds(3)) != std::future_status::ready) {
+      error_info = "Timed out waiting for validate_domain service";
+      return false;
+    }
+
+    const auto result = future_result.get();
+    if (!result->success) {
+      error_info = result->error_info.empty() ? "Domain validation failed" : result->error_info;
+      return false;
+    }
+    return true;
+  }
+
+  check_valid = popf_plan_solver_->isDomainValid(domain_expert_->getDomain(), get_namespace());
+  if (!check_valid) {
+    error_info = "PDDL syntax error";
+    return false;
+  }
+
+  return true;
 }
 
 

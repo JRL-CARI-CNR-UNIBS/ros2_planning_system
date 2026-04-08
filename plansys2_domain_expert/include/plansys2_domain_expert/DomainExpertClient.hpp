@@ -40,6 +40,7 @@
 #include "plansys2_msgs/srv/get_domain_durative_action_details.hpp"
 #include "plansys2_msgs/srv/get_node_details.hpp"
 #include "plansys2_msgs/srv/get_states.hpp"
+#include "plansys2_msgs/srv/extend_domain.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -205,6 +206,14 @@ public:
    */
   std::string getDomain(bool use_cache);
 
+  /**
+   * @brief Extend the current domain with new definitions.
+   *
+   * @param[in] extension The PDDL string containing the new definitions to be added to the domain.
+   * @return true if the domain was successfully extended, false otherwise.
+   */
+  bool extendDomain(const std::string & extension);
+
   std::string cached_domain_;
 
 private:
@@ -227,6 +236,7 @@ private:
   rclcpp::Client<plansys2_msgs::srv::GetDomainActionDetails>::SharedPtr get_action_details_client_;
   rclcpp::Client<plansys2_msgs::srv::GetDomainDurativeActionDetails>::SharedPtr
     get_durative_action_details_client_;
+  rclcpp::Client<plansys2_msgs::srv::ExtendDomain>::SharedPtr extend_domain_client_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr domain_sub_;
 };
 

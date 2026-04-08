@@ -1,0 +1,6 @@
+# ExtendDomain.srv
+string extension
+---
+bool success
+string error_info
+string resulting_domain

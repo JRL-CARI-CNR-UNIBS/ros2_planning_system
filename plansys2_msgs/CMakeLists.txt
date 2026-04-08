@@ -34,6 +34,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/AffectParam.srv"
   "srv/ExistNode.srv"
   "srv/GetDomain.srv"
+  "srv/ExtendDomain.srv"
   "srv/GetDomainActions.srv"
   "srv/GetDomainActionDetails.srv"
   "srv/GetDomainDerivedPredicateDetails.srv"

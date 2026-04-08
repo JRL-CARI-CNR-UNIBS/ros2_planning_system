@@ -17,6 +17,7 @@
 
 #include <optional>
 #include <memory>
+#include <string>
 
 #include "plansys2_domain_expert/DomainExpert.hpp"
 #include "plansys2_popf_plan_solver/popf_plan_solver.hpp"
@@ -31,6 +32,7 @@
 #include "plansys2_msgs/srv/get_domain.hpp"
 #include "plansys2_msgs/srv/get_node_details.hpp"
 #include "plansys2_msgs/srv/get_states.hpp"
+#include "plansys2_msgs/srv/extend_domain.hpp"
 #include "plansys2_msgs/srv/validate_domain.hpp"
 
 #include "rclcpp/rclcpp.hpp"
@@ -262,8 +264,21 @@ public:
     const std::shared_ptr<plansys2_msgs::srv::GetDomain::Request> request,
     const std::shared_ptr<plansys2_msgs::srv::GetDomain::Response> response);
 
+  /**
+   * @brief Service callback to extend the current domain with new definitions.
+   *
+   * @param[in] request_header ROS service request header.
+   * @param[in] request Service request containing the derived predicate name.
+   * @param[out] response Service response containing the predicate rules and success status.
+   */
+  void extend_domain_service_callback(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<plansys2_msgs::srv::ExtendDomain::Request> request,
+    const std::shared_ptr<plansys2_msgs::srv::ExtendDomain::Response> response);
+
 private:
   std::shared_ptr<DomainExpert> domain_expert_;
+  bool validate_using_planner_node_;
 
   rclcpp::Service<plansys2_msgs::srv::GetDomainName>::SharedPtr get_name_service_;
   rclcpp::Service<plansys2_msgs::srv::GetDomainTypes>::SharedPtr get_types_service_;
@@ -287,6 +302,7 @@ private:
   rclcpp::Service<plansys2_msgs::srv::GetDomainDerivedPredicateDetails>::SharedPtr
     get_domain_derived_predicate_details_service_;
   rclcpp::Service<plansys2_msgs::srv::GetDomain>::SharedPtr get_domain_service_;
+  rclcpp::Service<plansys2_msgs::srv::ExtendDomain>::SharedPtr extend_domain_service_;
 
   rclcpp::Client<plansys2_msgs::srv::ValidateDomain>::SharedPtr
     validate_domain_client_;
@@ -295,6 +311,9 @@ private:
   rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::String>::SharedPtr domain_pub_;
 
   std::unique_ptr<plansys2::POPFPlanSolver> popf_plan_solver_;
+
+  bool
+  validate_current_domain(std::string & error_info);
 };
 
 }  // namespace plansys2
